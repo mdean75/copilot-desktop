@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sidebar: 220 13% 18%;
+    --sidebar-foreground: 220 13% 91%;
+    --sidebar-border: 220 13% 24%;
+    --background: 0 0% 100%;
+    --foreground: 220 13% 10%;
+    --muted: 220 13% 96%;
+    --muted-foreground: 220 9% 46%;
+    --border: 220 13% 90%;
+    --input: 220 13% 90%;
+    --primary: 220 90% 56%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 220 13% 94%;
+    --accent-foreground: 220 13% 10%;
+    --destructive: 0 84% 60%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --sidebar: 220 13% 14%;
+    --sidebar-foreground: 220 13% 85%;
+    --sidebar-border: 220 13% 20%;
+    --background: 220 13% 10%;
+    --foreground: 220 13% 91%;
+    --muted: 220 13% 16%;
+    --muted-foreground: 220 9% 56%;
+    --border: 220 13% 20%;
+    --input: 220 13% 20%;
+    --primary: 220 90% 60%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 220 13% 18%;
+    --accent-foreground: 220 13% 91%;
+    --destructive: 0 84% 60%;
+  }
+
+  * {
+    @apply border-[hsl(var(--border))];
+  }
+
+  body {
+    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}

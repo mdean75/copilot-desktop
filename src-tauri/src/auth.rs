@@ -1,0 +1,142 @@
+use keyring::Entry;
+use reqwest::blocking::Client;
+use serde::{Deserialize, Serialize};
+use tauri::{command, AppHandle, Emitter};
+
+const SERVICE: &str = "copilot-desktop";
+const GITHUB_TOKEN_KEY: &str = "github_access_token";
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceFlowStart {
+    pub user_code: String,
+    pub verification_uri: String,
+}
+
+#[derive(Deserialize)]
+struct DeviceCodeResponse {
+    device_code: String,
+    user_code: String,
+    verification_uri: String,
+    expires_in: u64,
+    interval: u64,
+    error: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct TokenResponse {
+    access_token: Option<String>,
+    error: Option<String>,
+    error_description: Option<String>,
+}
+
+/// Starts the GitHub Device Flow: requests a device code, returns the user-facing
+/// code and verification URL, then polls in a background thread. Emits
+/// "auth://token-ready" with the token on success or "auth://token-error" on failure.
+#[command]
+pub fn start_device_auth(app: AppHandle, client_id: String) -> Result<DeviceFlowStart, String> {
+    let client = Client::new();
+
+    let resp: DeviceCodeResponse = client
+        .post("https://github.com/login/device/code")
+        .header("Accept", "application/json")
+        .form(&[
+            ("client_id", client_id.as_str()),
+            ("scope", "read:user repo read:org"),
+        ])
+        .send()
+        .map_err(|e| e.to_string())?
+        .json()
+        .map_err(|e| e.to_string())?;
+
+    if let Some(err) = resp.error {
+        return Err(err);
+    }
+
+    let start = DeviceFlowStart {
+        user_code: resp.user_code.clone(),
+        verification_uri: resp.verification_uri.clone(),
+    };
+
+    let device_code = resp.device_code.clone();
+    let interval = resp.interval;
+    let expires_in = resp.expires_in;
+
+    std::thread::spawn(move || {
+        let client = Client::new();
+        let deadline =
+            std::time::Instant::now() + std::time::Duration::from_secs(expires_in);
+
+        loop {
+            std::thread::sleep(std::time::Duration::from_secs(interval));
+
+            if std::time::Instant::now() > deadline {
+                app.emit("auth://token-error", "Code expired. Please try again.").ok();
+                return;
+            }
+
+            let result: Result<TokenResponse, _> = client
+                .post("https://github.com/login/oauth/access_token")
+                .header("Accept", "application/json")
+                .form(&[
+                    ("client_id", client_id.as_str()),
+                    ("device_code", device_code.as_str()),
+                    ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+                ])
+                .send()
+                .and_then(|r| r.json());
+
+            match result {
+                Ok(t) if t.access_token.is_some() => {
+                    app.emit("auth://token-ready", t.access_token.unwrap()).ok();
+                    return;
+                }
+                Ok(t) => match t.error.as_deref() {
+                    Some("authorization_pending") => continue,
+                    Some("slow_down") => {
+                        std::thread::sleep(std::time::Duration::from_secs(5));
+                        continue;
+                    }
+                    Some(_) => {
+                        let msg = t.error_description.or(t.error).unwrap_or_default();
+                        app.emit("auth://token-error", msg).ok();
+                        return;
+                    }
+                    None => continue,
+                },
+                Err(e) => {
+                    app.emit("auth://token-error", e.to_string()).ok();
+                    return;
+                }
+            }
+        }
+    });
+
+    Ok(start)
+}
+
+#[command]
+pub fn store_token(token: String) -> Result<(), String> {
+    Entry::new(SERVICE, GITHUB_TOKEN_KEY)
+        .map_err(|e| e.to_string())?
+        .set_password(&token)
+        .map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_token() -> Result<Option<String>, String> {
+    let entry = Entry::new(SERVICE, GITHUB_TOKEN_KEY).map_err(|e| e.to_string())?;
+    match entry.get_password() {
+        Ok(token) => Ok(Some(token)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[command]
+pub fn delete_token() -> Result<(), String> {
+    Entry::new(SERVICE, GITHUB_TOKEN_KEY)
+        .map_err(|e| e.to_string())?
+        .delete_password()
+        .map_err(|e| e.to_string())
+}
