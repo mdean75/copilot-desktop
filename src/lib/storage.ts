@@ -31,6 +31,18 @@ export async function listSkills(): Promise<Skill[]> {
   return invoke("list_skills");
 }
 
+export async function saveMcpServer(server: import("../types/mcp").McpServerConfig): Promise<void> {
+  await invoke("save_mcp_server", { id: server.id, data: server });
+}
+
+export async function deleteMcpServer(id: string): Promise<void> {
+  await invoke("delete_mcp_server", { id });
+}
+
+export async function listMcpServers(): Promise<import("../types/mcp").McpServerConfig[]> {
+  return invoke("list_mcp_servers");
+}
+
 export async function saveSettings(settings: AppSettings): Promise<void> {
   await invoke("save_settings", { data: settings });
 }

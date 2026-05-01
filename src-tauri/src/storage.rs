@@ -120,6 +120,48 @@ pub fn list_skills() -> Result<Vec<Value>, String> {
     Ok(items)
 }
 
+// ── MCP server configs ─────────────────────────────────────────────────────
+
+#[command]
+pub fn save_mcp_server(id: String, data: Value) -> Result<(), String> {
+    let path = ensure_dirs()?.join("mcp").join(format!("{id}.json"));
+    fs::write(path, serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn load_mcp_server(id: String) -> Result<Value, String> {
+    let path = data_dir()?.join("mcp").join(format!("{id}.json"));
+    let json = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn delete_mcp_server(id: String) -> Result<(), String> {
+    let path = data_dir()?.join("mcp").join(format!("{id}.json"));
+    if path.exists() {
+        fs::remove_file(path).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[command]
+pub fn list_mcp_servers() -> Result<Vec<Value>, String> {
+    let dir = ensure_dirs()?.join("mcp");
+    let mut items = Vec::new();
+    for entry in fs::read_dir(&dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        if entry.path().extension().and_then(|s| s.to_str()) == Some("json") {
+            if let Ok(json) = fs::read_to_string(entry.path()) {
+                if let Ok(val) = serde_json::from_str::<Value>(&json) {
+                    items.push(val);
+                }
+            }
+        }
+    }
+    Ok(items)
+}
+
 // ── Settings ───────────────────────────────────────────────────────────────
 
 #[command]

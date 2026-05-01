@@ -7,7 +7,7 @@ See full plan in conversation history. Summary of phases:
 - **Phase 1** ✅ — Tauri scaffold, GitHub OAuth (device flow), keychain token storage, 3-panel layout shell
 - **Phase 2** ✅ — Storage layer (`~/.copilot-desktop/`), GitHub Models API streaming client, conversation history, model picker
 - **Phase 3** ✅ — Built-in skills (Web Search, GitHub Context), skill builder drawer, custom skill CRUD, tool-calling loop
-- **Phase 4** 🔲 — MCP connected apps: Rust process management, curated server library, custom server form, status indicators
+- **Phase 4** ✅ — MCP connected apps: Rust process management, curated server library, custom server form, status indicators
 - **Phase 5** 🔲 — File upload, settings screen, conversation search, markdown rendering, packaging
 
 ## Known Backlog (post-Phase 3)

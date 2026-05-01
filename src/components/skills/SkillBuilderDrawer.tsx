@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSkillStore } from "../../store/useSkillStore";
+import { useMcpStore } from "../../store/useMcpStore";
 import { BUILTIN_TOOL_LABELS } from "../../lib/toolLabels";
 import type { BuiltinToolId } from "../../types/skill";
 
@@ -11,17 +12,25 @@ interface Props {
 
 export function SkillBuilderDrawer({ onClose }: Props) {
   const { create } = useSkillStore();
+  const { serverStates } = useMcpStore();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [starterPrompt, setStarterPrompt] = useState("");
   const [icon, setIcon] = useState("🤖");
   const [enabledTools, setEnabledTools] = useState<BuiltinToolId[]>([]);
+  const [enabledMcpServerIds, setEnabledMcpServerIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   const toggleTool = (toolId: BuiltinToolId) => {
     setEnabledTools((prev) =>
       prev.includes(toolId) ? prev.filter((t) => t !== toolId) : [...prev, toolId]
+    );
+  };
+
+  const toggleMcpServer = (id: string) => {
+    setEnabledMcpServerIds((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
     );
   };
 
@@ -35,7 +44,7 @@ export function SkillBuilderDrawer({ onClose }: Props) {
         systemPrompt: systemPrompt.trim(),
         icon,
         enabledBuiltinTools: enabledTools,
-        enabledMcpServerIds: [],
+        enabledMcpServerIds,
         starterPrompt: starterPrompt.trim() || undefined,
       });
       onClose();
@@ -129,10 +138,10 @@ export function SkillBuilderDrawer({ onClose }: Props) {
             </p>
           </div>
 
-          {/* Tools */}
+          {/* Built-in Tools */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--foreground))]">
-              Tools this skill can use
+              Built-in Tools
             </label>
             <div className="rounded-md border border-[hsl(var(--border))] divide-y divide-[hsl(var(--border))]">
               {(Object.keys(BUILTIN_TOOL_LABELS) as BuiltinToolId[]).map((toolId) => (
@@ -148,6 +157,44 @@ export function SkillBuilderDrawer({ onClose }: Props) {
               ))}
             </div>
           </div>
+
+          {/* MCP Apps */}
+          {serverStates.length > 0 && (
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--foreground))]">
+                Connected Apps
+              </label>
+              <div className="rounded-md border border-[hsl(var(--border))] divide-y divide-[hsl(var(--border))]">
+                {serverStates.map((ss) => (
+                  <label
+                    key={ss.config.id}
+                    className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-[hsl(var(--muted))]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={enabledMcpServerIds.includes(ss.config.id)}
+                      onChange={() => toggleMcpServer(ss.config.id)}
+                      className="accent-[hsl(var(--primary))]"
+                    />
+                    <span className="flex-1 text-sm">{ss.config.displayName}</span>
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        ss.status === "running" ? "bg-green-500" : "bg-gray-400"
+                      }`}
+                    />
+                    {ss.status === "running" && (
+                      <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                        {ss.availableTools.length} tools
+                      </span>
+                    )}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
+                Apps must be running to use their tools.
+              </p>
+            </div>
+          )}
 
           {/* Starter Prompt */}
           <div>

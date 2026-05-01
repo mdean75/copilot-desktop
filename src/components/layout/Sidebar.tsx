@@ -2,21 +2,28 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useConversationStore } from "../../store/useConversationStore";
 import { useSkillStore } from "../../store/useSkillStore";
+import { useMcpStore } from "../../store/useMcpStore";
 import { ConversationList } from "../conversation/ConversationList";
 import { SkillList } from "../skills/SkillList";
 import { SkillBuilderDrawer } from "../skills/SkillBuilderDrawer";
+import { McpServerDrawer } from "../mcp/McpServerDrawer";
 import { MODELS } from "../../types/settings";
 
 export function Sidebar() {
   const { user, signOut } = useAuthStore();
   const { load: loadConversations, create } = useConversationStore();
   const { load: loadSkills } = useSkillStore();
+  const { load: loadMcp, serverStates } = useMcpStore();
   const [showSkillBuilder, setShowSkillBuilder] = useState(false);
+  const [showMcpDrawer, setShowMcpDrawer] = useState(false);
 
   useEffect(() => {
     loadConversations();
     loadSkills();
+    loadMcp();
   }, []);
+
+  const runningCount = serverStates.filter((s) => s.status === "running").length;
 
   return (
     <>
@@ -49,8 +56,32 @@ export function Sidebar() {
           <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wider opacity-50">
             Apps
           </p>
-          <p className="px-2 py-2 text-xs opacity-40">No apps connected</p>
-          <button className="flex w-full items-center gap-1 rounded px-2 py-1 text-xs opacity-60 hover:opacity-100">
+          {serverStates.length === 0 ? (
+            <p className="px-2 py-2 text-xs opacity-40">No apps connected</p>
+          ) : (
+            <div className="py-1">
+              {serverStates.map((ss) => (
+                <div key={ss.config.id} className="flex items-center gap-2 px-2 py-1">
+                  <span
+                    className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${
+                      ss.status === "running"
+                        ? "bg-green-500"
+                        : ss.status === "error"
+                        ? "bg-red-500"
+                        : ss.status === "starting"
+                        ? "bg-yellow-400 animate-pulse"
+                        : "bg-gray-400"
+                    }`}
+                  />
+                  <span className="truncate text-xs">{ss.config.displayName}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => setShowMcpDrawer(true)}
+            className="flex w-full items-center gap-1 rounded px-2 py-1 text-xs opacity-60 hover:opacity-100"
+          >
             + Add App
           </button>
         </div>
@@ -61,6 +92,9 @@ export function Sidebar() {
               <img src={user.avatarUrl} alt={user.name} className="h-6 w-6 rounded-full" />
             )}
             <span className="flex-1 truncate text-xs">{user?.name}</span>
+            {runningCount > 0 && (
+              <span className="text-xs opacity-50">{runningCount} app{runningCount > 1 ? "s" : ""}</span>
+            )}
             <button onClick={signOut} className="text-xs opacity-50 hover:opacity-100" title="Sign out">
               ↩
             </button>
@@ -70,6 +104,9 @@ export function Sidebar() {
 
       {showSkillBuilder && (
         <SkillBuilderDrawer onClose={() => setShowSkillBuilder(false)} />
+      )}
+      {showMcpDrawer && (
+        <McpServerDrawer onClose={() => setShowMcpDrawer(false)} />
       )}
     </>
   );

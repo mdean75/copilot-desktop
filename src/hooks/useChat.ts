@@ -1,16 +1,31 @@
 import { useCallback } from "react";
 import { nanoid } from "nanoid";
+import { invoke } from "@tauri-apps/api/core";
 import { complete, streamCompletion } from "../lib/githubModelsClient";
-import { getToolDefinitions, executeTool } from "../lib/tools";
+import { getToolDefinitions, executeTool, type ToolDefinition } from "../lib/tools";
 import { useConversationStore } from "../store/useConversationStore";
 import { useSkillStore } from "../store/useSkillStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useMcpStore } from "../store/useMcpStore";
 import type { ApiMessage } from "../lib/githubModelsClient";
+import type { McpTool } from "../types/mcp";
+
+function mcpToolToDefinition(tool: McpTool): ToolDefinition {
+  return {
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.inputSchema as Record<string, unknown>,
+    },
+  };
+}
 
 export function useChat() {
   const token = useAuthStore((s) => s.token);
   const store = useConversationStore();
   const skillStore = useSkillStore();
+  const mcpStore = useMcpStore();
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -18,9 +33,17 @@ export function useChat() {
 
       const conversation = store.activeConversation;
       const skill = skillStore.activeSkill();
-      const tools = skill ? getToolDefinitions(skill.enabledBuiltinTools) : [];
 
-      // Add user message to store
+      // Builtin tools from the active skill
+      const builtinTools = skill ? getToolDefinitions(skill.enabledBuiltinTools) : [];
+
+      // MCP tools from the skill's enabled MCP servers
+      const mcpTools = skill
+        ? mcpStore.getToolsForServers(skill.enabledMcpServerIds).map(mcpToolToDefinition)
+        : [];
+
+      const tools = [...builtinTools, ...mcpTools];
+
       store.addMessage({
         id: nanoid(),
         role: "user",
@@ -29,7 +52,6 @@ export function useChat() {
         model: conversation.model,
       });
 
-      // Add empty assistant placeholder
       store.addMessage({
         id: nanoid(),
         role: "assistant",
@@ -38,7 +60,6 @@ export function useChat() {
         model: conversation.model,
       });
 
-      // Build API messages (snapshot before tool loop)
       let apiMessages: ApiMessage[] = [
         ...(skill ? [{ role: "system" as const, content: skill.systemPrompt }] : []),
         ...conversation.messages
@@ -48,7 +69,6 @@ export function useChat() {
       ];
 
       try {
-        // Tool-calling loop (non-streaming rounds)
         if (tools.length > 0) {
           let hasToolCalls = true;
           while (hasToolCalls) {
@@ -60,17 +80,32 @@ export function useChat() {
               break;
             }
 
-            // Append assistant tool-call message
             apiMessages.push({
               role: "assistant",
               content: msg.content,
               tool_calls: msg.tool_calls,
             });
 
-            // Execute each tool and append results
             for (const call of msg.tool_calls) {
               const args = JSON.parse(call.function.arguments) as Record<string, unknown>;
-              const result = await executeTool(call.function.name, args, token);
+              let result: string;
+
+              // Route to MCP or builtin executor
+              const mcpServerId = mcpStore.findServerForTool(call.function.name);
+              if (mcpServerId) {
+                try {
+                  result = await invoke<string>("call_mcp_tool", {
+                    serverId: mcpServerId,
+                    toolName: call.function.name,
+                    arguments: args,
+                  });
+                } catch (e) {
+                  result = `Tool error: ${String(e)}`;
+                }
+              } else {
+                result = await executeTool(call.function.name, args, token);
+              }
+
               apiMessages.push({
                 role: "tool",
                 content: result,
@@ -80,7 +115,6 @@ export function useChat() {
           }
         }
 
-        // Stream final response
         for await (const chunk of streamCompletion(token, conversation.model, apiMessages)) {
           store.appendToLastMessage(chunk);
         }
@@ -90,7 +124,7 @@ export function useChat() {
 
       await store.finalizeStream();
     },
-    [token, store, skillStore]
+    [token, store, skillStore, mcpStore]
   );
 
   return { sendMessage, isStreaming: store.isStreaming };
