@@ -13,9 +13,9 @@ See full plan in conversation history. Summary of phases:
 ## Known Backlog (post-Phase 3)
 
 1. Model switching mid-conversation
-2. Markdown/code rendering in message bubbles
-3. Delete conversations from sidebar
-4. Prompt history recall (up-arrow)
+2. ~~Markdown/code rendering in message bubbles~~ ✅
+3. ~~Delete conversations from sidebar~~ ✅
+4. ~~Prompt history recall (up-arrow)~~ ✅
 
 ## Tech Stack
 

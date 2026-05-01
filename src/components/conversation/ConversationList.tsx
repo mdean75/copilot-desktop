@@ -2,7 +2,7 @@ import { useConversationStore } from "../../store/useConversationStore";
 import { ConversationItem } from "./ConversationItem";
 
 export function ConversationList() {
-  const { conversations, activeConversation, open } = useConversationStore();
+  const { conversations, activeConversation, open, remove } = useConversationStore();
 
   if (conversations.length === 0) {
     return (
@@ -20,6 +20,7 @@ export function ConversationList() {
           conversation={c}
           isActive={activeConversation?.id === c.id}
           onClick={() => open(c.id)}
+          onDelete={() => remove(c.id)}
         />
       ))}
     </div>

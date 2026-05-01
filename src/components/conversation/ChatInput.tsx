@@ -12,25 +12,92 @@ export function ChatInput() {
   const { activeSkill, activeSkillId } = useSkillStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Prompt history: list of sent messages, index -1 means "current draft"
+  const history = useRef<string[]>([]);
+  const historyIndex = useRef(-1);
+  const draftValue = useRef("");
+
   const handleSend = async () => {
     const trimmed = value.trim();
     if (!trimmed || isStreaming) return;
-    // Auto-create a conversation if none is active
     if (!activeConversation) await create(MODELS[0].id);
+
+    // Push to front of history, deduplicate adjacent
+    if (history.current[0] !== trimmed) {
+      history.current.unshift(trimmed);
+    }
+    historyIndex.current = -1;
+    draftValue.current = "";
+
     setValue("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     await sendMessage(trimmed);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+      return;
+    }
+
+    // History navigation — only when caret is at the first/last line
+    const el = textareaRef.current;
+    if (!el) return;
+
+    if (e.key === "ArrowUp" && history.current.length > 0) {
+      // Only navigate if we're on the first line (or field is empty)
+      const atTop = el.selectionStart === 0 || !value.includes("\n");
+      if (!atTop) return;
+      e.preventDefault();
+
+      if (historyIndex.current === -1) {
+        draftValue.current = value; // save current draft
+      }
+      const nextIndex = Math.min(historyIndex.current + 1, history.current.length - 1);
+      historyIndex.current = nextIndex;
+      const recalled = history.current[nextIndex];
+      setValue(recalled);
+      // Move caret to end after React re-renders
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = recalled.length;
+          textareaRef.current.selectionEnd = recalled.length;
+          textareaRef.current.style.height = "auto";
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+        }
+      });
+      return;
+    }
+
+    if (e.key === "ArrowDown" && historyIndex.current >= 0) {
+      const atBottom =
+        el.selectionStart === el.value.length || !value.includes("\n");
+      if (!atBottom) return;
+      e.preventDefault();
+
+      const nextIndex = historyIndex.current - 1;
+      historyIndex.current = nextIndex;
+      const recalled = nextIndex === -1 ? draftValue.current : history.current[nextIndex];
+      setValue(recalled);
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = recalled.length;
+          textareaRef.current.selectionEnd = recalled.length;
+          textareaRef.current.style.height = "auto";
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+        }
+      });
     }
   };
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setValue(e.target.value);
+    const newValue = e.target.value;
+    setValue(newValue);
+    // Reset history navigation when user types
+    if (historyIndex.current !== -1) {
+      historyIndex.current = -1;
+    }
     // Auto-grow textarea
     const el = e.target;
     el.style.height = "auto";
