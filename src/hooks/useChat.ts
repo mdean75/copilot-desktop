@@ -63,10 +63,11 @@ export function useChat() {
       const allBuiltinToolIds = [...new Set([...agentBuiltinTools, ...skillBuiltinTools])];
       const builtinTools = getToolDefinitions(allBuiltinToolIds);
 
-      // MCP tools from the agent's enabled MCP servers
-      const mcpTools = agent
-        ? mcpStore.getToolsForServers(agent.enabledMcpServerIds).map(mcpToolToDefinition)
-        : [];
+      // MCP tools: agent-scoped if an agent is active, otherwise all running servers
+      const mcpServerIds = agent
+        ? agent.enabledMcpServerIds
+        : mcpStore.serverStates.filter((s) => s.status === "running").map((s) => s.config.id);
+      const mcpTools = mcpStore.getToolsForServers(mcpServerIds).map(mcpToolToDefinition);
 
       const tools = [...builtinTools, ...mcpTools];
 
@@ -78,8 +79,9 @@ export function useChat() {
         model,
       });
 
+      const assistantMsgId = nanoid();
       store.addMessage({
-        id: nanoid(),
+        id: assistantMsgId,
         role: "assistant",
         content: "",
         createdAt: new Date().toISOString(),
@@ -97,11 +99,14 @@ export function useChat() {
         ...(systemPrompt ? [{ role: "system" as const, content: systemPrompt }] : []),
         ...conversation.messages
           .filter((m) => m.role === "user" || m.role === "assistant")
-          .map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+          .map((m) => ({ role: m.role as "user" | "assistant", content: m.content ?? null })),
         { role: "user" as const, content },
       ];
 
       try {
+        const displayToolCalls: NonNullable<import("../types/conversation").Message["toolCalls"]> = [];
+        const displayToolResults: NonNullable<import("../types/conversation").Message["toolResults"]> = [];
+
         // Tool-calling loop (non-streaming via Rust backend)
         if (tools.length > 0) {
           let hasToolCalls = true;
@@ -121,13 +126,14 @@ export function useChat() {
 
             apiMessages.push({
               role: "assistant",
-              content: msg.content,
+              content: msg.content ?? null,
               tool_calls: msg.tool_calls,
             });
 
             for (const call of msg.tool_calls) {
               const args = JSON.parse(call.function.arguments) as Record<string, unknown>;
               let result: string;
+              let isError = false;
 
               // Route to MCP or builtin executor
               const mcpServerId = mcpStore.findServerForTool(call.function.name);
@@ -140,10 +146,18 @@ export function useChat() {
                   });
                 } catch (e) {
                   result = `Tool error: ${String(e)}`;
+                  isError = true;
                 }
               } else {
                 result = await executeTool(call.function.name, args, token);
               }
+
+              displayToolCalls.push({
+                id: call.id,
+                type: "function",
+                function: { name: call.function.name, arguments: call.function.arguments },
+              });
+              displayToolResults.push({ toolCallId: call.id, content: result, isError });
 
               apiMessages.push({
                 role: "tool",
@@ -152,6 +166,10 @@ export function useChat() {
               });
             }
           }
+        }
+
+        if (displayToolCalls.length > 0) {
+          store.updateMessageTools(assistantMsgId, displayToolCalls, displayToolResults);
         }
 
         // Streaming final response via Rust backend + events

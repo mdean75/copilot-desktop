@@ -3,6 +3,7 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import type { Message } from "../../types/conversation";
+import { ToolActivityCard } from "./ToolActivityCard";
 
 interface Props {
   message: Message;
@@ -11,7 +12,9 @@ interface Props {
 export function MessageBubble({ message }: Props) {
   const isUser = message.role === "user";
 
-  if (!message.content) {
+  const hasTools = !isUser && (message.toolCalls?.length ?? 0) > 0;
+
+  if (!message.content && !hasTools) {
     return (
       <div className="flex justify-start">
         <div className="rounded-2xl bg-[hsl(var(--muted))] px-4 py-2.5 text-sm">
@@ -22,7 +25,19 @@ export function MessageBubble({ message }: Props) {
   }
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
+      {hasTools && (
+        <div className="mb-1 w-full max-w-[80%] space-y-1">
+          {message.toolCalls!.map((call) => (
+            <ToolActivityCard
+              key={call.id}
+              toolCall={call}
+              toolResult={message.toolResults?.find((r) => r.toolCallId === call.id)}
+            />
+          ))}
+        </div>
+      )}
+      {message.content && (
       <div
         className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
           isUser
@@ -122,6 +137,7 @@ export function MessageBubble({ message }: Props) {
           </ReactMarkdown>
         )}
       </div>
+      )}
     </div>
   );
 }

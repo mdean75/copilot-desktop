@@ -15,6 +15,7 @@ interface ConversationStore {
   setModel: (model: string) => void;
   addMessage: (message: Message) => void;
   appendToLastMessage: (chunk: string) => void;
+  updateMessageTools: (id: string, toolCalls: Message["toolCalls"], toolResults: Message["toolResults"]) => void;
   finalizeStream: () => Promise<void>;
   remove: (id: string) => Promise<void>;
 }
@@ -74,6 +75,20 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
           messages: [...s.activeConversation.messages, message],
         },
         isStreaming: message.role === "assistant" && message.content === "",
+      };
+    });
+  },
+
+  updateMessageTools: (id, toolCalls, toolResults) => {
+    set((s) => {
+      if (!s.activeConversation) return s;
+      return {
+        activeConversation: {
+          ...s.activeConversation,
+          messages: s.activeConversation.messages.map((m) =>
+            m.id === id ? { ...m, toolCalls, toolResults } : m
+          ),
+        },
       };
     });
   },

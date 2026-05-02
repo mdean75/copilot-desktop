@@ -42,6 +42,7 @@ struct CopilotEndpoints {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ChatMessage {
     pub role: String,
+    #[serde(default)]
     pub content: serde_json::Value,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_call_id: Option<String>,

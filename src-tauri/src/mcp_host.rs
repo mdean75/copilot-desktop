@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::Mutex;
 use tauri::{command, State};
@@ -110,11 +110,19 @@ pub fn start_mcp_server(
     }
 
     let mut cmd = Command::new(&command);
+
+    // Augment PATH so npx/node/python are findable outside a login shell.
+    // Tauri apps on macOS inherit a minimal PATH that omits /usr/local/bin etc.
+    let current_path = std::env::var("PATH").unwrap_or_default();
+    let extra = "/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin";
+    let full_path = format!("{extra}:{current_path}");
+
     cmd.args(&args)
         .envs(&env)
+        .env("PATH", full_path)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null());
+        .stderr(Stdio::piped());
 
     let mut child = cmd
         .spawn()
@@ -122,6 +130,7 @@ pub fn start_mcp_server(
 
     let stdin = BufWriter::new(child.stdin.take().ok_or("Failed to open stdin")?);
     let stdout = BufReader::new(child.stdout.take().ok_or("Failed to open stdout")?);
+    let mut stderr = child.stderr.take();
 
     let mut proc = McpProcess {
         child,
@@ -131,8 +140,8 @@ pub fn start_mcp_server(
         next_id: 1,
     };
 
-    // MCP handshake
-    send_request(
+    // MCP handshake — capture stderr on failure for a useful error message
+    let init_result = send_request(
         &mut proc,
         "initialize",
         json!({
@@ -140,7 +149,23 @@ pub fn start_mcp_server(
             "capabilities": {},
             "clientInfo": { "name": "copilot-desktop", "version": "0.1.0" }
         }),
-    )?;
+    );
+    if let Err(e) = init_result {
+        let stderr_text = stderr
+            .as_mut()
+            .and_then(|s| {
+                let mut buf = String::new();
+                s.read_to_string(&mut buf).ok()?;
+                Some(buf)
+            })
+            .unwrap_or_default();
+        let detail = if stderr_text.trim().is_empty() {
+            e
+        } else {
+            format!("{e}\n{}", stderr_text.trim())
+        };
+        return Err(detail);
+    }
 
     send_notification(&mut proc, "notifications/initialized")?;
 
