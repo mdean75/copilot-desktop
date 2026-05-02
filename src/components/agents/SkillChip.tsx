@@ -7,7 +7,7 @@ export function SkillChip() {
 
   return (
     <div className="flex items-center gap-1 rounded-full bg-[hsl(var(--primary))] px-2.5 py-0.5 text-xs text-white">
-      <span>{skill.icon}</span>
+      <span>⚡</span>
       <span className="font-medium">{skill.name}</span>
       <button
         onClick={() => setActive(null)}

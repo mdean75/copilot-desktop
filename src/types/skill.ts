@@ -1,15 +1,7 @@
-export type BuiltinToolId = "web_search" | "github_context" | "file_upload";
-
-export interface Skill {
-  id: string;
+export interface FsSkill {
   name: string;
   description: string;
-  systemPrompt: string;
-  icon: string;
-  enabledBuiltinTools: BuiltinToolId[];
-  enabledMcpServerIds: string[];
-  starterPrompt?: string;
-  isBuiltin: boolean;
-  createdAt: string;
-  updatedAt: string;
+  allowedTools: string[];
+  body: string;
+  dirName: string;
 }

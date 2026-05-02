@@ -41,7 +41,7 @@ export interface Conversation {
   createdAt: string;
   updatedAt: string;
   messages: Message[];
-  activeSkillId?: string;
+  activeAgentId?: string;
   model: string;
   pinned: boolean;
 }

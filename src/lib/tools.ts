@@ -1,4 +1,4 @@
-import type { BuiltinToolId } from "../types/skill";
+import type { BuiltinToolId } from "../types/agent";
 
 export interface ToolDefinition {
   type: "function";

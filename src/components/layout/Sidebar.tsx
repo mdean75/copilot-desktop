@@ -2,24 +2,27 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useConversationStore } from "../../store/useConversationStore";
 import { useModelStore } from "../../store/useModelStore";
+import { useAgentStore } from "../../store/useAgentStore";
 import { useSkillStore } from "../../store/useSkillStore";
 import { useMcpStore } from "../../store/useMcpStore";
 import { ConversationList } from "../conversation/ConversationList";
-import { SkillList } from "../skills/SkillList";
-import { SkillBuilderDrawer } from "../skills/SkillBuilderDrawer";
+import { AgentList } from "../agents/AgentList";
+import { AgentBuilderDrawer } from "../agents/AgentBuilderDrawer";
 import { McpServerDrawer } from "../mcp/McpServerDrawer";
 
 export function Sidebar() {
   const { user, signOut } = useAuthStore();
   const { load: loadConversations, create } = useConversationStore();
   const { selectedModel } = useModelStore();
-  const { load: loadSkills } = useSkillStore();
+  const { load: loadAgents, setActive: setActiveAgent } = useAgentStore();
+  const { skills, activeSkillDirName, setActive: setActiveSkill, load: loadSkills } = useSkillStore();
   const { load: loadMcp, serverStates } = useMcpStore();
-  const [showSkillBuilder, setShowSkillBuilder] = useState(false);
+  const [showAgentBuilder, setShowAgentBuilder] = useState(false);
   const [showMcpDrawer, setShowMcpDrawer] = useState(false);
 
   useEffect(() => {
     loadConversations();
+    loadAgents();
     loadSkills();
     loadMcp();
   }, []);
@@ -48,9 +51,47 @@ export function Sidebar() {
           <div className="my-2 border-t border-[hsl(var(--sidebar-border))]" />
 
           <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wider opacity-50">
-            My Skills
+            My Agents
           </p>
-          <SkillList onNewSkill={() => setShowSkillBuilder(true)} />
+          <AgentList
+            onNewAgent={() => setShowAgentBuilder(true)}
+            onSelectAgent={() => setActiveSkill(null)}
+          />
+
+          <div className="my-2 border-t border-[hsl(var(--sidebar-border))]" />
+
+          <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wider opacity-50">
+            Skills
+          </p>
+          {skills.length === 0 ? (
+            <p className="px-2 py-2 text-xs opacity-40">
+              Add skills to ~/.copilot/skills/
+            </p>
+          ) : (
+            <div className="flex flex-col gap-0.5">
+              {skills.map((skill) => {
+                const isActive = skill.dirName === activeSkillDirName;
+                return (
+                  <button
+                    key={skill.dirName}
+                    onClick={() => {
+                      setActiveSkill(isActive ? null : skill.dirName);
+                      if (!isActive) setActiveAgent(null);
+                    }}
+                    title={skill.description || undefined}
+                    className={`flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left transition-colors ${
+                      isActive
+                        ? "bg-[hsl(var(--primary))] text-white"
+                        : "text-[hsl(var(--sidebar-foreground))] hover:bg-white/10"
+                    }`}
+                  >
+                    <span className="text-xs">⚡</span>
+                    <p className="truncate text-xs font-medium">{skill.name}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <div className="my-2 border-t border-[hsl(var(--sidebar-border))]" />
 
@@ -103,8 +144,8 @@ export function Sidebar() {
         </div>
       </aside>
 
-      {showSkillBuilder && (
-        <SkillBuilderDrawer onClose={() => setShowSkillBuilder(false)} />
+      {showAgentBuilder && (
+        <AgentBuilderDrawer onClose={() => setShowAgentBuilder(false)} />
       )}
       {showMcpDrawer && (
         <McpServerDrawer onClose={() => setShowMcpDrawer(false)} />

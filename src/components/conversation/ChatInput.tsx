@@ -2,15 +2,18 @@ import { useRef, useState } from "react";
 import { useChat } from "../../hooks/useChat";
 import { useConversationStore } from "../../store/useConversationStore";
 import { useModelStore } from "../../store/useModelStore";
+import { useAgentStore } from "../../store/useAgentStore";
 import { useSkillStore } from "../../store/useSkillStore";
-import { SkillChip } from "../skills/SkillChip";
+import { AgentChip } from "../agents/AgentChip";
+import { SkillChip } from "../agents/SkillChip";
 
 export function ChatInput() {
   const [value, setValue] = useState("");
   const { sendMessage, isStreaming } = useChat();
   const { activeConversation, create } = useConversationStore();
   const { selectedModel } = useModelStore();
-  const { activeSkill, activeSkillId } = useSkillStore();
+  const { activeAgent, activeAgentId } = useAgentStore();
+  const { activeSkillDirName } = useSkillStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Prompt history: list of sent messages, index -1 means "current draft"
@@ -105,16 +108,17 @@ export function ChatInput() {
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   };
 
-  const skill = activeSkill();
-  const placeholder = skill?.starterPrompt
-    ? skill.starterPrompt
+  const agent = activeAgent();
+  const placeholder = agent?.starterPrompt
+    ? agent.starterPrompt
     : "Ask anything… (Shift+Enter for new line)";
 
   return (
     <div className="border-t border-[hsl(var(--border))] p-3">
-      {activeSkillId && (
+      {(activeAgentId || activeSkillDirName) && (
         <div className="mb-2 flex items-center gap-2">
-          <SkillChip />
+          {activeAgentId && <AgentChip />}
+          {activeSkillDirName && <SkillChip />}
         </div>
       )}
       <div className="flex items-end gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 focus-within:ring-1 focus-within:ring-[hsl(var(--primary))]">

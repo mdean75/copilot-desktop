@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSkillStore } from "../../store/useSkillStore";
+import { useAgentStore } from "../../store/useAgentStore";
 import { useMcpStore } from "../../store/useMcpStore";
 import { BUILTIN_TOOL_LABELS } from "../../lib/toolLabels";
 import { McpServerDrawer } from "../mcp/McpServerDrawer";
@@ -16,10 +16,10 @@ function StatusDot({ status }: { status: McpServerStatus }) {
 }
 
 export function ContextPanel() {
-  const { activeSkill } = useSkillStore();
+  const { activeAgent } = useAgentStore();
   const { serverStates, startServer, stopServer, removeServer } = useMcpStore();
   const [showMcpDrawer, setShowMcpDrawer] = useState(false);
-  const skill = activeSkill();
+  const agent = activeAgent();
 
   return (
     <>
@@ -27,17 +27,17 @@ export function ContextPanel() {
         {/* Active skill */}
         <div className="border-b border-[hsl(var(--border))] p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-            Active Skill
+            Active Agent
           </p>
-          {skill ? (
+          {agent ? (
             <div className="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-2">
               <div className="flex items-center gap-1.5">
-                <span>{skill.icon}</span>
-                <span className="text-sm font-medium">{skill.name}</span>
+                <span>{agent.icon}</span>
+                <span className="text-sm font-medium">{agent.name}</span>
               </div>
-              {skill.description && (
+              {agent.description && (
                 <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-                  {skill.description}
+                  {agent.description}
                 </p>
               )}
             </div>
@@ -51,9 +51,9 @@ export function ContextPanel() {
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
             Tools in Use
           </p>
-          {skill?.enabledBuiltinTools.length ? (
+          {agent?.enabledBuiltinTools.length ? (
             <div className="flex flex-col gap-1">
-              {skill.enabledBuiltinTools.map((toolId) => (
+              {agent.enabledBuiltinTools.map((toolId) => (
                 <div key={toolId} className="flex items-center gap-1.5 text-xs">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                   <span>{BUILTIN_TOOL_LABELS[toolId]}</span>

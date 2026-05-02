@@ -17,24 +17,36 @@ See full plan in conversation history. Summary of phases:
 3. ~~Delete conversations from sidebar~~ ✅
 4. ~~Prompt history recall (up-arrow)~~ ✅
 
+## Terminology Alignment ✅
+
+Renamed "Skills" → "Agents" throughout to align with GitHub Copilot conventions:
+
+- **Agents** — custom assistants with a system prompt, tools, and MCP server access. Stored in `~/.copilot-desktop/agents/`. Selectable from sidebar; active agent injects its system prompt and enables its tools.
+- **Skills** — lightweight, read-only capabilities defined as `SKILL.md` files in `~/.copilot/skills/<name>/`. Loaded at startup from the filesystem. Selectable from sidebar; active skill injects its body as system prompt context and enables its `allowed-tools`.
+
 ## Future Enhancements
 
-### Align terminology with GitHub Copilot standards
+### On-Demand Skill Loading (aligns with VS Code Copilot behavior)
 
-The app currently uses "Skills" to mean system prompt + tools + tool-calling loop, which is effectively an agent. This conflicts with GitHub Copilot's established terminology where these concepts are distinct:
+**Current behavior:** User selects a skill explicitly; its body is injected into the system prompt.
 
-- **Instructions** — persistent behavioral guidelines (like `.github/copilot-instructions.md`)
-- **Prompts** — reusable prompt templates (`.github/prompts/*.md`) that users invoke for specific tasks
-- **Agents** — autonomous entities with tools, a system prompt, and multi-step reasoning (e.g., `@workspace`, custom agents via `chat-agent.json`)
-- **Skills** — in Copilot Extensions, a skill is a lightweight read-only capability that answers a question (no tool loop, no state)
+**Target behavior:** All skill frontmatter (name + description + allowed-tools) is injected into every conversation. The model uses the `description` field to decide when a skill is relevant and calls a `load_skill(name)` tool to fetch the body on demand. Skill body is returned as a tool result and used in the model's reply.
 
-**Goal:** Refactor the current "Skills" feature to align with these definitions:
-1. Rename current tool-equipped skills → **Agents** (system prompt + tools + loop)
-2. Add **Instructions** as persistent context injected into every conversation
-3. Add **Prompts** as user-invokable templates (no tools, just pre-filled messages)
-4. Reserve **Skills** for simple, stateless capabilities (or remove the term to avoid confusion)
+- Uses `description` for relevance matching (no `when` field — aligns with GH Copilot convention)
+- Fits into the existing tool-calling loop; add `load_skill` to builtin tools
+- Remove explicit skill selection UI once implemented
 
-This will make the app intuitive for anyone coming from VS Code Copilot.
+### Instructions
+
+Inject `~/.github/copilot-instructions.md` as persistent context prepended to every conversation. Aligns with VS Code Copilot's repository/user instructions feature.
+
+### Prompts
+
+Scan `~/.github/prompts/*.prompt.md` for reusable prompt templates. Surface them via a `/` command palette in the chat input to pre-fill a message. No tools — text only.
+
+### Session State Alignment
+
+GH CLI and other Copilot tools store session state in a specific home directory location. Align `~/.copilot-desktop/` with that convention as a future cleanup.
 
 ## Tech Stack
 

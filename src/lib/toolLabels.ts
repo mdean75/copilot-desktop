@@ -1,4 +1,4 @@
-import type { BuiltinToolId } from "../types/skill";
+import type { BuiltinToolId } from "../types/agent";
 
 export const BUILTIN_TOOL_LABELS: Record<BuiltinToolId, string> = {
   web_search: "Web Search",

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Conversation } from "../types/conversation";
-import type { Skill } from "../types/skill";
+import type { Agent } from "../types/agent";
+import type { FsSkill } from "../types/skill";
 import type { AppSettings } from "../types/settings";
 
 export async function saveConversation(conversation: Conversation): Promise<void> {
@@ -19,16 +20,20 @@ export async function listConversations(): Promise<Omit<Conversation, "messages"
   return invoke("list_conversations");
 }
 
-export async function saveSkill(skill: Skill): Promise<void> {
-  await invoke("save_skill", { id: skill.id, data: skill });
+export async function saveAgent(agent: Agent): Promise<void> {
+  await invoke("save_agent", { id: agent.id, data: agent });
 }
 
-export async function deleteSkill(id: string): Promise<void> {
-  await invoke("delete_skill", { id });
+export async function deleteAgent(id: string): Promise<void> {
+  await invoke("delete_agent", { id });
 }
 
-export async function listSkills(): Promise<Skill[]> {
-  return invoke("list_skills");
+export async function listAgents(): Promise<Agent[]> {
+  return invoke("list_agents");
+}
+
+export async function listFsSkills(): Promise<FsSkill[]> {
+  return invoke("list_fs_skills");
 }
 
 export async function saveMcpServer(server: import("../types/mcp").McpServerConfig): Promise<void> {

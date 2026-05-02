@@ -1,37 +1,41 @@
-import { useSkillStore } from "../../store/useSkillStore";
+import { useAgentStore } from "../../store/useAgentStore";
 
 interface Props {
-  onNewSkill: () => void;
+  onNewAgent: () => void;
+  onSelectAgent?: () => void;
 }
 
-export function SkillList({ onNewSkill }: Props) {
-  const { allSkills, activeSkillId, setActive, remove } = useSkillStore();
-  const skills = allSkills();
+export function AgentList({ onNewAgent, onSelectAgent }: Props) {
+  const { allAgents, activeAgentId, setActive, remove } = useAgentStore();
+  const agents = allAgents();
 
   return (
     <div className="flex flex-col gap-0.5">
-      {skills.map((skill) => {
-        const isActive = skill.id === activeSkillId;
+      {agents.map((agent) => {
+        const isActive = agent.id === activeAgentId;
         return (
-          <div key={skill.id} className="group flex items-center gap-1">
+          <div key={agent.id} className="group flex items-center gap-1">
             <button
-              onClick={() => setActive(isActive ? null : skill.id)}
+              onClick={() => {
+                setActive(isActive ? null : agent.id);
+                if (!isActive) onSelectAgent?.();
+              }}
               className={`flex flex-1 items-center gap-1.5 rounded px-2 py-1.5 text-left transition-colors ${
                 isActive
                   ? "bg-[hsl(var(--primary))] text-white"
                   : "text-[hsl(var(--sidebar-foreground))] hover:bg-white/10"
               }`}
             >
-              <span>{skill.icon}</span>
+              <span>{agent.icon}</span>
               <div className="min-w-0">
-                <p className="truncate text-xs font-medium">{skill.name}</p>
+                <p className="truncate text-xs font-medium">{agent.name}</p>
               </div>
             </button>
-            {!skill.isBuiltin && (
+            {!agent.isBuiltin && (
               <button
-                onClick={() => remove(skill.id)}
+                onClick={() => remove(agent.id)}
                 className="hidden px-1 text-xs opacity-40 hover:opacity-100 group-hover:block"
-                title="Delete skill"
+                title="Delete agent"
               >
                 ✕
               </button>
@@ -40,10 +44,10 @@ export function SkillList({ onNewSkill }: Props) {
         );
       })}
       <button
-        onClick={onNewSkill}
+        onClick={onNewAgent}
         className="flex w-full items-center gap-1 rounded px-2 py-1 text-xs opacity-60 hover:opacity-100 text-[hsl(var(--sidebar-foreground))]"
       >
-        + New Skill
+        + New Agent
       </button>
     </div>
   );

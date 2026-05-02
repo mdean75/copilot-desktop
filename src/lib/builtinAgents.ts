@@ -1,6 +1,6 @@
-import type { Skill } from "../types/skill";
+import type { Agent } from "../types/agent";
 
-export const BUILTIN_SKILLS: Skill[] = [
+export const BUILTIN_AGENTS: Agent[] = [
   {
     id: "builtin-web-research",
     name: "Web Research",

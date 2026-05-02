@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useSkillStore } from "../../store/useSkillStore";
+import { useAgentStore } from "../../store/useAgentStore";
 import { useMcpStore } from "../../store/useMcpStore";
 import { BUILTIN_TOOL_LABELS } from "../../lib/toolLabels";
-import type { BuiltinToolId } from "../../types/skill";
+import type { BuiltinToolId } from "../../types/agent";
 
 const ICONS = ["🤖", "🔍", "🐙", "📋", "📊", "✏️", "🗂", "💡", "🚀", "📝", "🔧", "⚡"];
 
@@ -10,8 +10,8 @@ interface Props {
   onClose: () => void;
 }
 
-export function SkillBuilderDrawer({ onClose }: Props) {
-  const { create } = useSkillStore();
+export function AgentBuilderDrawer({ onClose }: Props) {
+  const { create } = useAgentStore();
   const { serverStates } = useMcpStore();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -55,29 +55,24 @@ export function SkillBuilderDrawer({ onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      {/* Backdrop */}
       <div className="flex-1 bg-black/20" onClick={onClose} />
 
-      {/* Drawer */}
       <div className="flex h-full w-[480px] flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-4 py-3">
           <button onClick={onClose} className="text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
             ← Back
           </button>
-          <h2 className="text-sm font-semibold">Create New Skill</h2>
+          <h2 className="text-sm font-semibold">Create New Agent</h2>
           <button
             onClick={handleSave}
             disabled={!name.trim() || !systemPrompt.trim() || isSaving}
             className="rounded-md bg-[hsl(var(--primary))] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
           >
-            {isSaving ? "Saving…" : "Save Skill"}
+            {isSaving ? "Saving…" : "Save Agent"}
           </button>
         </div>
 
-        {/* Form */}
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
-          {/* Icon */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--foreground))]">Icon</label>
             <div className="flex flex-wrap gap-2">
@@ -97,10 +92,9 @@ export function SkillBuilderDrawer({ onClose }: Props) {
             </div>
           </div>
 
-          {/* Name */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--foreground))]">
-              Skill Name <span className="text-[hsl(var(--destructive))]">*</span>
+              Agent Name <span className="text-[hsl(var(--destructive))]">*</span>
             </label>
             <input
               value={name}
@@ -110,7 +104,6 @@ export function SkillBuilderDrawer({ onClose }: Props) {
             />
           </div>
 
-          {/* Description */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--foreground))]">Description</label>
             <input
@@ -121,7 +114,6 @@ export function SkillBuilderDrawer({ onClose }: Props) {
             />
           </div>
 
-          {/* System Prompt */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--foreground))]">
               System Prompt <span className="text-[hsl(var(--destructive))]">*</span>
@@ -138,7 +130,6 @@ export function SkillBuilderDrawer({ onClose }: Props) {
             </p>
           </div>
 
-          {/* Built-in Tools */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--foreground))]">
               Built-in Tools
@@ -158,7 +149,6 @@ export function SkillBuilderDrawer({ onClose }: Props) {
             </div>
           </div>
 
-          {/* MCP Apps */}
           {serverStates.length > 0 && (
             <div>
               <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--foreground))]">
@@ -196,7 +186,6 @@ export function SkillBuilderDrawer({ onClose }: Props) {
             </div>
           )}
 
-          {/* Starter Prompt */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--foreground))]">
               Starter Prompt <span className="text-[hsl(var(--muted-foreground))]">(optional)</span>
@@ -208,7 +197,7 @@ export function SkillBuilderDrawer({ onClose }: Props) {
               className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
             />
             <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-              Pre-fills the chat input when this skill is activated.
+              Pre-fills the chat input when this agent is activated.
             </p>
           </div>
         </div>

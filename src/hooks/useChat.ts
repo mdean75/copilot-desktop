@@ -5,10 +5,14 @@ import { listen } from "@tauri-apps/api/event";
 import { getToolDefinitions, executeTool, type ToolDefinition } from "../lib/tools";
 import { useConversationStore } from "../store/useConversationStore";
 import { useModelStore } from "../store/useModelStore";
+import { useAgentStore } from "../store/useAgentStore";
 import { useSkillStore } from "../store/useSkillStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useMcpStore } from "../store/useMcpStore";
 import type { McpTool } from "../types/mcp";
+import type { BuiltinToolId } from "../types/agent";
+
+const BUILTIN_TOOL_IDS: BuiltinToolId[] = ["web_search", "github_context", "file_upload"];
 
 interface ApiMessage {
   role: string;
@@ -37,6 +41,7 @@ function mcpToolToDefinition(tool: McpTool): ToolDefinition {
 export function useChat() {
   const token = useAuthStore((s) => s.token);
   const store = useConversationStore();
+  const agentStore = useAgentStore();
   const skillStore = useSkillStore();
   const mcpStore = useMcpStore();
   const selectedModel = useModelStore((s) => s.selectedModel);
@@ -48,14 +53,19 @@ export function useChat() {
       const conversation = store.activeConversation;
       // Use the currently selected model (allows switching mid-conversation)
       const model = selectedModel || conversation.model;
-      const skill = skillStore.activeSkill();
+      const agent = agentStore.activeAgent();
+      const activeSkill = skillStore.activeSkill();
 
-      // Builtin tools from the active skill
-      const builtinTools = skill ? getToolDefinitions(skill.enabledBuiltinTools) : [];
+      // Builtin tools from agent + skill allowed-tools
+      const agentBuiltinTools = agent ? agent.enabledBuiltinTools : [];
+      const skillBuiltinTools = (activeSkill?.allowedTools ?? [])
+        .filter((t): t is BuiltinToolId => BUILTIN_TOOL_IDS.includes(t as BuiltinToolId));
+      const allBuiltinToolIds = [...new Set([...agentBuiltinTools, ...skillBuiltinTools])];
+      const builtinTools = getToolDefinitions(allBuiltinToolIds);
 
-      // MCP tools from the skill's enabled MCP servers
-      const mcpTools = skill
-        ? mcpStore.getToolsForServers(skill.enabledMcpServerIds).map(mcpToolToDefinition)
+      // MCP tools from the agent's enabled MCP servers
+      const mcpTools = agent
+        ? mcpStore.getToolsForServers(agent.enabledMcpServerIds).map(mcpToolToDefinition)
         : [];
 
       const tools = [...builtinTools, ...mcpTools];
@@ -76,8 +86,15 @@ export function useChat() {
         model,
       });
 
+      // Build system prompt: agent first, then skill body appended
+      const systemParts = [
+        agent?.systemPrompt,
+        activeSkill?.body,
+      ].filter(Boolean) as string[];
+      const systemPrompt = systemParts.join("\n\n");
+
       let apiMessages: ApiMessage[] = [
-        ...(skill ? [{ role: "system" as const, content: skill.systemPrompt }] : []),
+        ...(systemPrompt ? [{ role: "system" as const, content: systemPrompt }] : []),
         ...conversation.messages
           .filter((m) => m.role === "user" || m.role === "assistant")
           .map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
@@ -168,7 +185,7 @@ export function useChat() {
 
       await store.finalizeStream();
     },
-    [token, store, skillStore, mcpStore, selectedModel]
+    [token, store, agentStore, skillStore, mcpStore, selectedModel]
   );
 
   return { sendMessage, isStreaming: store.isStreaming };
