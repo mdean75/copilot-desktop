@@ -49,6 +49,40 @@ pub struct ChatMessage {
     pub tool_calls: Option<serde_json::Value>,
 }
 
+#[derive(Deserialize)]
+struct ModelsResponse {
+    data: Vec<CopilotModel>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CopilotModel {
+    pub id: String,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub capabilities: Option<ModelCapabilities>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ModelCapabilities {
+    #[serde(default)]
+    pub family: Option<String>,
+    #[serde(default)]
+    pub limits: Option<ModelLimits>,
+    #[serde(rename = "type", default)]
+    pub model_type: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ModelLimits {
+    #[serde(default)]
+    pub max_output_tokens: Option<u32>,
+    #[serde(default)]
+    pub max_prompt_tokens: Option<u32>,
+}
+
 #[derive(Serialize)]
 struct ChatRequest {
     model: String,
@@ -254,6 +288,40 @@ pub async fn copilot_stream(
     });
 
     Ok(())
+}
+
+/// List available models from the Copilot API
+#[command]
+pub async fn copilot_list_models(
+    state: tauri::State<'_, CopilotState>,
+    github_token: String,
+) -> Result<Vec<CopilotModel>, String> {
+    let (copilot_token, chat_url) = get_copilot_token(&state, &github_token).await?;
+
+    let url = format!("{}/models", chat_url.trim_end_matches('/'));
+    let resp = state
+        .client
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", copilot_token))
+        .header("Accept", "application/json")
+        .header("Editor-Version", "vscode/1.100.0")
+        .header("Copilot-Integration-Id", "vscode-chat")
+        .send()
+        .await
+        .map_err(|e| format!("Models request failed: {}", e))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status().as_u16();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format!("Models API error ({}): {}", status, body));
+    }
+
+    let data: ModelsResponse = resp
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse models response: {}", e))?;
+
+    Ok(data.data)
 }
 
 /// Clear the cached Copilot token

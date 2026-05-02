@@ -1,22 +1,29 @@
 import { useConversationStore } from "../../store/useConversationStore";
+import { useModelStore } from "../../store/useModelStore";
 import { ModelPicker } from "../model/ModelPicker";
 import { MessageList } from "../conversation/MessageList";
 import { ChatInput } from "../conversation/ChatInput";
-import { MODELS } from "../../types/settings";
 
 export function ChatPanel() {
-  const { activeConversation, create } = useConversationStore();
+  const { activeConversation, create, setModel } = useConversationStore();
+  const { selectedModel, setSelectedModel } = useModelStore();
+
+  const currentModel = activeConversation?.model ?? selectedModel;
 
   const handleModelChange = (modelId: string) => {
-    // Model changes take effect on the next new conversation
-    if (!activeConversation) create(modelId);
+    setSelectedModel(modelId);
+    if (activeConversation) {
+      setModel(modelId);
+    } else {
+      create(modelId);
+    }
   };
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="flex items-center border-b border-[hsl(var(--border))] px-4 py-2">
         <ModelPicker
-          value={activeConversation?.model ?? MODELS[0].id}
+          value={currentModel}
           onChange={handleModelChange}
         />
       </div>

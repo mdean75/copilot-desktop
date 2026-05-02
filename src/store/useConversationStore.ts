@@ -12,6 +12,7 @@ interface ConversationStore {
   create: (model: string) => Promise<Conversation>;
   open: (id: string) => Promise<void>;
   close: () => void;
+  setModel: (model: string) => void;
   addMessage: (message: Message) => void;
   appendToLastMessage: (chunk: string) => void;
   finalizeStream: () => Promise<void>;
@@ -54,6 +55,15 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
   },
 
   close: () => set({ activeConversation: null }),
+
+  setModel: (model) => {
+    set((s) => {
+      if (!s.activeConversation) return s;
+      return {
+        activeConversation: { ...s.activeConversation, model },
+      };
+    });
+  },
 
   addMessage: (message) => {
     set((s) => {

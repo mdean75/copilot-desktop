@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useConversationStore } from "../../store/useConversationStore";
+import { useModelStore } from "../../store/useModelStore";
 import { useSkillStore } from "../../store/useSkillStore";
 import { useMcpStore } from "../../store/useMcpStore";
 import { ConversationList } from "../conversation/ConversationList";
 import { SkillList } from "../skills/SkillList";
 import { SkillBuilderDrawer } from "../skills/SkillBuilderDrawer";
 import { McpServerDrawer } from "../mcp/McpServerDrawer";
-import { MODELS } from "../../types/settings";
 
 export function Sidebar() {
   const { user, signOut } = useAuthStore();
   const { load: loadConversations, create } = useConversationStore();
+  const { selectedModel } = useModelStore();
   const { load: loadSkills } = useSkillStore();
   const { load: loadMcp, serverStates } = useMcpStore();
   const [showSkillBuilder, setShowSkillBuilder] = useState(false);
@@ -30,7 +31,7 @@ export function Sidebar() {
       <aside className="flex h-full w-60 flex-shrink-0 flex-col bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]">
         <div className="p-3">
           <button
-            onClick={() => create(MODELS[0].id)}
+            onClick={() => create(selectedModel)}
             className="flex w-full items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
           >
             <span>+</span>

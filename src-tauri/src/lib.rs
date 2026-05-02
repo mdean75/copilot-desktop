@@ -25,6 +25,7 @@ pub fn run() {
             auth::delete_token,
             copilot::copilot_complete,
             copilot::copilot_stream,
+            copilot::copilot_list_models,
             copilot::clear_copilot_token,
             storage::save_conversation,
             storage::load_conversation,

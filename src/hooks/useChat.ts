@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getToolDefinitions, executeTool, type ToolDefinition } from "../lib/tools";
 import { useConversationStore } from "../store/useConversationStore";
+import { useModelStore } from "../store/useModelStore";
 import { useSkillStore } from "../store/useSkillStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useMcpStore } from "../store/useMcpStore";
@@ -38,12 +39,15 @@ export function useChat() {
   const store = useConversationStore();
   const skillStore = useSkillStore();
   const mcpStore = useMcpStore();
+  const selectedModel = useModelStore((s) => s.selectedModel);
 
   const sendMessage = useCallback(
     async (content: string) => {
       if (!token || !store.activeConversation) return;
 
       const conversation = store.activeConversation;
+      // Use the currently selected model (allows switching mid-conversation)
+      const model = selectedModel || conversation.model;
       const skill = skillStore.activeSkill();
 
       // Builtin tools from the active skill
@@ -61,7 +65,7 @@ export function useChat() {
         role: "user",
         content,
         createdAt: new Date().toISOString(),
-        model: conversation.model,
+        model,
       });
 
       store.addMessage({
@@ -69,7 +73,7 @@ export function useChat() {
         role: "assistant",
         content: "",
         createdAt: new Date().toISOString(),
-        model: conversation.model,
+        model,
       });
 
       let apiMessages: ApiMessage[] = [
@@ -87,7 +91,7 @@ export function useChat() {
           while (hasToolCalls) {
             const response = await invoke<{ choices: Array<{ message: { role: string; content: string | null; tool_calls?: ApiToolCall[] }; finish_reason: string }> }>("copilot_complete", {
               githubToken: token,
-              model: conversation.model,
+              model,
               messages: apiMessages,
               tools,
             });
@@ -151,7 +155,7 @@ export function useChat() {
 
         await invoke("copilot_stream", {
           githubToken: token,
-          model: conversation.model,
+          model,
           messages: apiMessages,
           requestId,
         });
@@ -164,7 +168,7 @@ export function useChat() {
 
       await store.finalizeStream();
     },
-    [token, store, skillStore, mcpStore]
+    [token, store, skillStore, mcpStore, selectedModel]
   );
 
   return { sendMessage, isStreaming: store.isStreaming };

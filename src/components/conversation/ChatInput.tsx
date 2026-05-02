@@ -1,14 +1,15 @@
 import { useRef, useState } from "react";
 import { useChat } from "../../hooks/useChat";
 import { useConversationStore } from "../../store/useConversationStore";
+import { useModelStore } from "../../store/useModelStore";
 import { useSkillStore } from "../../store/useSkillStore";
 import { SkillChip } from "../skills/SkillChip";
-import { MODELS } from "../../types/settings";
 
 export function ChatInput() {
   const [value, setValue] = useState("");
   const { sendMessage, isStreaming } = useChat();
   const { activeConversation, create } = useConversationStore();
+  const { selectedModel } = useModelStore();
   const { activeSkill, activeSkillId } = useSkillStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -20,7 +21,7 @@ export function ChatInput() {
   const handleSend = async () => {
     const trimmed = value.trim();
     if (!trimmed || isStreaming) return;
-    if (!activeConversation) await create(MODELS[0].id);
+    if (!activeConversation) await create(selectedModel);
 
     // Push to front of history, deduplicate adjacent
     if (history.current[0] !== trimmed) {
