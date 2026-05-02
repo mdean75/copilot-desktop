@@ -55,6 +55,12 @@ struct ModelsResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct ModelPolicy {
+    #[serde(default)]
+    pub state: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct CopilotModel {
     pub id: String,
     #[serde(default)]
@@ -63,6 +69,12 @@ pub struct CopilotModel {
     pub version: Option<String>,
     #[serde(default)]
     pub capabilities: Option<ModelCapabilities>,
+    #[serde(default)]
+    pub policy: Option<ModelPolicy>,
+    #[serde(default)]
+    pub model_picker_enabled: Option<bool>,
+    #[serde(default)]
+    pub preview: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

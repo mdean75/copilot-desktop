@@ -6,7 +6,7 @@ interface Props {
 }
 
 export function ModelPicker({ value, onChange }: Props) {
-  const { models, isLoading } = useModelStore();
+  const { models, isLoading, error } = useModelStore();
 
   if (isLoading) {
     return (
@@ -16,6 +16,14 @@ export function ModelPicker({ value, onChange }: Props) {
       >
         <option>Loading models...</option>
       </select>
+    );
+  }
+
+  if (error) {
+    return (
+      <span className="text-xs text-red-500" title={error}>
+        Models error (hover)
+      </span>
     );
   }
 
