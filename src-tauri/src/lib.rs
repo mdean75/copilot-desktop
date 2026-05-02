@@ -1,4 +1,5 @@
 mod auth;
+mod copilot;
 mod mcp_host;
 mod storage;
 
@@ -8,6 +9,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_deep_link::init())
         .manage(mcp_host::McpHostState::new())
+        .manage(copilot::CopilotState::new())
         .setup(|_app| {
             #[cfg(any(target_os = "linux", windows))]
             {
@@ -21,6 +23,9 @@ pub fn run() {
             auth::store_token,
             auth::get_token,
             auth::delete_token,
+            copilot::copilot_complete,
+            copilot::copilot_stream,
+            copilot::clear_copilot_token,
             storage::save_conversation,
             storage::load_conversation,
             storage::delete_conversation,

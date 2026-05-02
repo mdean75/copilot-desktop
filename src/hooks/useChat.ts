@@ -1,14 +1,26 @@
 import { useCallback } from "react";
 import { nanoid } from "nanoid";
 import { invoke } from "@tauri-apps/api/core";
-import { complete, streamCompletion } from "../lib/githubModelsClient";
+import { listen } from "@tauri-apps/api/event";
 import { getToolDefinitions, executeTool, type ToolDefinition } from "../lib/tools";
 import { useConversationStore } from "../store/useConversationStore";
 import { useSkillStore } from "../store/useSkillStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useMcpStore } from "../store/useMcpStore";
-import type { ApiMessage } from "../lib/githubModelsClient";
 import type { McpTool } from "../types/mcp";
+
+interface ApiMessage {
+  role: string;
+  content: string | null;
+  tool_call_id?: string;
+  tool_calls?: ApiToolCall[];
+}
+
+interface ApiToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
 
 function mcpToolToDefinition(tool: McpTool): ToolDefinition {
   return {
@@ -69,10 +81,16 @@ export function useChat() {
       ];
 
       try {
+        // Tool-calling loop (non-streaming via Rust backend)
         if (tools.length > 0) {
           let hasToolCalls = true;
           while (hasToolCalls) {
-            const response = await complete(token, conversation.model, apiMessages, tools);
+            const response = await invoke<{ choices: Array<{ message: { role: string; content: string | null; tool_calls?: ApiToolCall[] }; finish_reason: string }> }>("copilot_complete", {
+              githubToken: token,
+              model: conversation.model,
+              messages: apiMessages,
+              tools,
+            });
             const msg = response.choices[0].message;
 
             if (!msg.tool_calls?.length) {
@@ -115,9 +133,31 @@ export function useChat() {
           }
         }
 
-        for await (const chunk of streamCompletion(token, conversation.model, apiMessages)) {
-          store.appendToLastMessage(chunk);
-        }
+        // Streaming final response via Rust backend + events
+        const requestId = nanoid();
+
+        const chunkUnlisten = await listen<string>(`copilot://stream-chunk/${requestId}`, (event) => {
+          store.appendToLastMessage(event.payload);
+        });
+
+        const donePromise = new Promise<void>((resolve) => {
+          listen<void>(`copilot://stream-done/${requestId}`, () => {
+            resolve();
+          }).then((unlisten) => {
+            // Store unlisten to clean up after done
+            donePromise.then(() => unlisten());
+          });
+        });
+
+        await invoke("copilot_stream", {
+          githubToken: token,
+          model: conversation.model,
+          messages: apiMessages,
+          requestId,
+        });
+
+        await donePromise;
+        chunkUnlisten();
       } catch (e) {
         store.appendToLastMessage(`\n\n*Error: ${String(e)}*`);
       }

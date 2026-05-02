@@ -21,10 +21,11 @@ export interface AppSettings {
   sendOnEnter: boolean;
   streamResponses: boolean;
   dataDir: string;
+  apiProvider: "copilot" | "github-models";
 }
 
-// Model IDs must match GitHub Models API exactly (no provider prefix).
-// Available models: https://github.com/marketplace/models
+// Model IDs must match the Copilot API model identifiers.
+// When using the Copilot provider, only models supported by the Copilot API are available.
 export const MODELS: ModelOption[] = [
   {
     id: "gpt-4o",
@@ -51,19 +52,11 @@ export const MODELS: ModelOption[] = [
     tier: "high",
   },
   {
-    id: "meta-llama/Llama-3.3-70B-Instruct",
-    label: "Llama 3.3 70B",
-    provider: "Meta",
-    contextWindow: 128000,
-    supportsVision: false,
-    tier: "high",
-  },
-  {
-    id: "mistral-large-2411",
-    label: "Mistral Large",
-    provider: "Mistral",
-    contextWindow: 128000,
-    supportsVision: false,
+    id: "claude-3.5-sonnet",
+    label: "Claude 3.5 Sonnet",
+    provider: "Anthropic",
+    contextWindow: 200000,
+    supportsVision: true,
     tier: "high",
   },
 ];

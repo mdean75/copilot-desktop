@@ -82,6 +82,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   signOut: async () => {
     await invoke("delete_token").catch(() => {});
+    await invoke("clear_copilot_token").catch(() => {});
     set({ user: null, token: null, error: null, deviceFlow: null });
   },
 }));

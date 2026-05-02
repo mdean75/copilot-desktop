@@ -15,12 +15,13 @@ pub struct DeviceFlowStart {
 
 #[derive(Deserialize)]
 struct DeviceCodeResponse {
-    device_code: String,
-    user_code: String,
-    verification_uri: String,
-    expires_in: u64,
-    interval: u64,
+    device_code: Option<String>,
+    user_code: Option<String>,
+    verification_uri: Option<String>,
+    expires_in: Option<u64>,
+    interval: Option<u64>,
     error: Option<String>,
+    error_description: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -42,7 +43,7 @@ pub fn start_device_auth(app: AppHandle, client_id: String) -> Result<DeviceFlow
         .header("Accept", "application/json")
         .form(&[
             ("client_id", client_id.as_str()),
-            ("scope", "read:user repo read:org"),
+            ("scope", "read:user"),
         ])
         .send()
         .map_err(|e| e.to_string())?
@@ -50,17 +51,20 @@ pub fn start_device_auth(app: AppHandle, client_id: String) -> Result<DeviceFlow
         .map_err(|e| e.to_string())?;
 
     if let Some(err) = resp.error {
-        return Err(err);
+        let msg = resp.error_description.unwrap_or(err);
+        return Err(msg);
     }
 
-    let start = DeviceFlowStart {
-        user_code: resp.user_code.clone(),
-        verification_uri: resp.verification_uri.clone(),
-    };
+    let device_code = resp.device_code.ok_or("Missing device_code in response")?;
+    let user_code = resp.user_code.ok_or("Missing user_code in response")?;
+    let verification_uri = resp.verification_uri.ok_or("Missing verification_uri in response")?;
+    let interval = resp.interval.unwrap_or(5);
+    let expires_in = resp.expires_in.unwrap_or(900);
 
-    let device_code = resp.device_code.clone();
-    let interval = resp.interval;
-    let expires_in = resp.expires_in;
+    let start = DeviceFlowStart {
+        user_code: user_code.clone(),
+        verification_uri: verification_uri.clone(),
+    };
 
     std::thread::spawn(move || {
         let client = Client::new();
