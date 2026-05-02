@@ -16,6 +16,8 @@ See full plan in conversation history. Summary of phases:
 2. ~~Markdown/code rendering in message bubbles~~ ✅
 3. ~~Delete conversations from sidebar~~ ✅
 4. ~~Prompt history recall (up-arrow)~~ ✅
+5. ~~Tool activity visibility in chat~~ ✅ — tool cards appear above AI response showing which tool ran, key argument, and expandable result
+6. ~~MCP server PATH resolution~~ ✅ — augment PATH on spawn so npx/node work outside a login shell; capture stderr on failure for actionable errors
 
 ## Terminology Alignment ✅
 
